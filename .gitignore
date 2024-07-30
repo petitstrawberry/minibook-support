@@ -1,0 +1,7 @@
+# gitignore for C projects
+
+bin/
+obj/
+
+# for macOS
+.DS_Store
