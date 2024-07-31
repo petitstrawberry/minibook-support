@@ -32,4 +32,14 @@ all: clean $(TARGET)
 clean:
 	-rm -f $(OBJECTS) $(DEPENDS) $(TARGET)
 
+.PHONY: install
+install: $(TARGET)
+	chmod +x ./install/install.sh
+	./install/install.sh
+
+.PHONY: uninstall
+uninstall:
+	chmod +x ./install/uninstall.sh
+	./install/uninstall.sh
+
 -include $(DEPENDS)
