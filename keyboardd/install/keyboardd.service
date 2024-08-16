@@ -1,0 +1,12 @@
+[Unit]
+Description=Daemon for the keyboardd of the MiniBook
+ConditionPathExists=/usr/bin/
+
+[Service]
+
+ExecStart=/usr/bin/keyboardd
+Restart=no
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
