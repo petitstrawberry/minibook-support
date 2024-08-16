@@ -1,4 +1,4 @@
-TARGETS = trackpointerd
+TARGETS = common trackpointerd keyboardd
 
 .PHONY: all clean install uninstall $(TARGETS)
 
@@ -21,5 +21,3 @@ uninstall:
 
 $(TARGETS):
 	$(MAKE) -C $@
-
-
