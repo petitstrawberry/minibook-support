@@ -6,12 +6,12 @@
 
 // Server struct
 typedef struct {
-  pthread_t thread;
-  int is_running;
-  const char *path;
-  int sockfd;
-  int connfd;
-  uint8_t (*callback)(uint8_t, uint8_t);
+    pthread_t thread;
+    int is_running;
+    const char *path;
+    int sockfd;
+    int connfd;
+    uint8_t (*callback)(uint8_t, uint8_t);
 } server_t;
 
 // Setup server

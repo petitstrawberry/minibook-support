@@ -20,10 +20,10 @@ int get_debug_status() { return is_enabled_debug; }
 
 // Debug printf
 void debug_printf(const char *fmt, ...) {
-  if (is_enabled_debug) {
-    va_list args;
-    va_start(args, fmt);
-    vprintf(fmt, args);
-    va_end(args);
-  }
+    if (is_enabled_debug) {
+        va_list args;
+        va_start(args, fmt);
+        vprintf(fmt, args);
+        va_end(args);
+    }
 }
