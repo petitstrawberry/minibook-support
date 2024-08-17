@@ -5,9 +5,9 @@ ifeq "$(shell getconf LONG_BIT)" "64"
 else
   LDFLAGS =
 endif
-LIBS      =
-INCLUDE   = -I./include
-TARGET    = ./bin/$(shell basename `readlink -f .`)
+LIBS      = ../common/bin/libcommon.a
+INCLUDE   = -I./include -I../common/include
+TARGET    = ./bin/$(shell basename `readlink -f .`) ../common/bin/$(shell basename `readlink -f ../common`)
 SRCDIR    = ./src
 ifeq "$(strip $(SRCDIR))" ""
   SRCDIR  = .
