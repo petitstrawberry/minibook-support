@@ -1,4 +1,4 @@
-TARGETS = common trackpointerd keyboardd
+TARGETS = common trackpointerd keyboardd tabletmoded
 
 .PHONY: all clean install uninstall $(TARGETS)
 

@@ -1,0 +1,12 @@
+[Unit]
+Description=Daemon for the tabletmode of the MiniBook
+ConditionPathExists=/usr/bin/
+
+[Service]
+
+ExecStart=/usr/bin/tabletmoded
+Restart=no
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
