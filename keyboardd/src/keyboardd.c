@@ -78,7 +78,8 @@ int new_device() {
     // Setup the device
     struct uinput_setup uisetup = {0};
     memset(&uisetup, 0, sizeof(uisetup));
-    strcpy(uisetup.name, "Keyboardd Virtual Keyboard");
+    strcpy(uisetup.name, "MiniBookSupport Virtual Keyboard");
+
     uisetup.id.bustype = BUS_USB;
     uisetup.id.vendor = 0x1234;
     uisetup.id.product = 0x5678;
