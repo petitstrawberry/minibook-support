@@ -28,7 +28,7 @@ Keyboardd is a daemon that manages the keyboard of the MiniBook.
 ## Installation
 
 ```bash
-git clone https://github.com/petitstrawberry/minibook.git
-cd minibook
+git clone https://github.com/petitstrawberry/minibook-support.git
+cd minibook-support
 sudo make install
 ```
