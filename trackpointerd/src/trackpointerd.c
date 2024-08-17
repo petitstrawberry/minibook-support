@@ -75,14 +75,14 @@ int new_device() {
     // Setup the device
     struct uinput_setup uisetup = {0};
     memset(&uisetup, 0, sizeof(uisetup));
-    strcpy(uisetup.name, "Trackpointerd Virtual Pointer");
+    strcpy(uisetup.name, "MiniBookSupport Virtual Mouse");
     uisetup.id.bustype = BUS_USB;
     uisetup.id.vendor = 0x1234;
     uisetup.id.product = 0x5678;
     uisetup.id.version = 1;
 
     if (ioctl(fd, UI_DEV_SETUP, &uisetup) < 0) {
-        perror("Failed to setup the virtusl device");
+        perror("Failed to setup the virtual device");
         recovery_device();
         exit(EXIT_FAILURE);
     }
