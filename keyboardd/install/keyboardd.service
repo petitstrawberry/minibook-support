@@ -1,6 +1,8 @@
 [Unit]
 Description=Daemon for the keyboardd of the MiniBook
 ConditionPathExists=/usr/bin/
+# /dev/input/by-path/platform-i8042-serio-0-event-kbd
+After=dev-input-by\x2dpath-platform\x2di8042\x2dserio\x2d0\x2devent\x2dkbd.device
 
 [Service]
 

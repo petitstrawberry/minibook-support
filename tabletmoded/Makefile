@@ -1,9 +1,9 @@
 COMPILER  = gcc
 CFLAGS    = -g -MMD -MP -Wall -Wextra -Winit-self -Wno-missing-field-initializers
 ifeq "$(shell getconf LONG_BIT)" "64"
-  LDFLAGS =
+  LDFLAGS = -lm
 else
-  LDFLAGS =
+  LDFLAGS = -lm
 endif
 LIBS      = ../common/bin/libcommon.a
 INCLUDE   = -I./include -I../common/include

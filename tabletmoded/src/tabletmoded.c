@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <linux/input.h>
 #include <linux/uinput.h>
+#include <math.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -21,10 +22,16 @@
 #define KEYBOARDD_SOCK "/var/run/keyboardd.sock"
 #define TRACKPOINTERD_SOCK "/var/run/trackpointerd.sock"
 
+// Accelerometer
+// For detect the tablet mode
+#define ACCEL_SCREEN_PATH "/sys/bus/iio/devices/iio:device0/"
+#define ACCEL_BASE_PATH "/sys/bus/iio/devices/iio:device1/"
+
 server_t *server_addr = NULL;
 
 int output = -1;
 int is_enabled_tabletmode = 0;
+int is_enabled_detection = 1;
 
 // Recovery the device
 void recovery_device() {
@@ -153,7 +160,7 @@ void set_tabletmode(int value) {
     if (send_command(TRACKPOINTERD_SOCK, 0, !value) == -1) {
         perror("Cannot send the command to the trackpointerd");
     }
-
+    is_enabled_tabletmode = value;
     emit(output, EV_SW, SW_TABLET_MODE, value);
     emit(output, EV_SYN, SYN_REPORT, 0);
 }
@@ -163,12 +170,11 @@ uint8_t server_callback(uint8_t type, uint8_t data) {
     debug_printf("Server callback: %d %d\n", type, data);
     switch (type) {
     case 0:
-        debug_printf("Set tabletmode: %d\n", data);
-        is_enabled_tabletmode = data;
-        set_tabletmode(data);
+        debug_printf("Set tabletmode detection: %d\n", data);
+        is_enabled_detection = data;
         return 0;
     case 1:
-        return (uint8_t)is_enabled_tabletmode;
+        return (uint8_t)is_enabled_detection;
     default:
         break;
     }
@@ -203,8 +209,122 @@ int main(int argc, char *argv[]) {
         return (EXIT_FAILURE);
     }
 
+    // Accelerometer scale
+    float accel_screen_scale = 0.0f;
+    float accel_base_scale = 0.0f;
+    FILE *fp = fopen(ACCEL_SCREEN_PATH "in_accel_scale", "r");
+    if (fp == NULL) {
+        perror("Cannot open the accel scale: " ACCEL_SCREEN_PATH
+               "in_accel_scale");
+        recovery_device();
+        return (EXIT_FAILURE);
+    }
+    fscanf(fp, "%f", &accel_screen_scale);
+    fclose(fp);
+    fp = fopen(ACCEL_BASE_PATH "in_accel_scale", "r");
+    if (fp == NULL) {
+        perror("Cannot open the accel scale: " ACCEL_BASE_PATH
+               "in_accel_scale");
+        recovery_device();
+        return (EXIT_FAILURE);
+    }
+    fscanf(fp, "%f", &accel_base_scale);
+    fclose(fp);
+
+    // Accelerometer x, y, z
+    double accel_screen_x = 0.0;
+    double accel_screen_y = 0.0;
+    double accel_screen_z = 0.0;
+    double accel_base_x = 0.0;
+    double accel_base_y = 0.0;
+    double accel_base_z = 0.0;
+
     // Main loop
     while (1) {
+        // 無効化されている場合はなにもしない
+        if (is_enabled_detection == 0) {
+            sleep(1);
+            continue;
+        }
+
+        FILE *fp_screen_x = fopen(ACCEL_SCREEN_PATH "in_accel_x_raw", "r");
+        if (fp_screen_x == NULL) {
+            perror("Cannot open the accel x: " ACCEL_SCREEN_PATH
+                   "in_accel_x_raw");
+            recovery_device();
+            return (EXIT_FAILURE);
+        }
+        FILE *fp_screen_z = fopen(ACCEL_SCREEN_PATH "in_accel_z_raw", "r");
+        if (fp_screen_z == NULL) {
+            perror("Cannot open the accel z: " ACCEL_SCREEN_PATH
+                   "in_accel_z_raw");
+            recovery_device();
+            return (EXIT_FAILURE);
+        }
+        FILE *fp_base_x = fopen(ACCEL_BASE_PATH "in_accel_x_raw", "r");
+        if (fp_base_x == NULL) {
+            perror("Cannot open the accel x: " ACCEL_BASE_PATH
+                   "in_accel_x_raw");
+            recovery_device();
+            return (EXIT_FAILURE);
+        }
+        FILE *fp_base_z = fopen(ACCEL_BASE_PATH "in_accel_z_raw", "r");
+        if (fp_base_z == NULL) {
+            perror("Cannot open the accel z: " ACCEL_BASE_PATH
+                   "in_accel_z_raw");
+            recovery_device();
+            return (EXIT_FAILURE);
+        }
+        // Read the accelerometer
+        fscanf(fp_screen_x, "%lf", &accel_screen_x);
+        fscanf(fp_screen_z, "%lf", &accel_screen_z);
+        fscanf(fp_base_x, "%lf", &accel_base_x);
+        fscanf(fp_base_z, "%lf", &accel_base_z);
+
+        // Close the files
+        fclose(fp_screen_x);
+        fclose(fp_screen_z);
+        fclose(fp_base_x);
+        fclose(fp_base_z);
+
+        // Scale the accelerometer
+        accel_screen_x *= accel_screen_scale;
+        accel_screen_z *= accel_screen_scale;
+        accel_base_x *= accel_base_scale;
+        accel_base_z *= accel_base_scale;
+
+        debug_printf("Screen: x:%f z:%f\n", accel_screen_x, accel_screen_z);
+        debug_printf("Base: x:%f z:%f\n", accel_base_x, accel_base_z);
+
+        // Get the angle from x, z
+        double angle_screen =
+            -atan2(accel_screen_x, accel_screen_z) * 180.0 / M_PI;
+        double angle_base = -atan2(accel_base_x, accel_base_z) * 180.0 / M_PI;
+
+        double angle = angle_base - angle_screen;
+
+        // このあたりはフィーリングで補正している
+        if (angle < 0 && angle_base < 0 && angle_screen > 0) {
+            angle += 360.0;
+        }
+
+        if (accel_screen_x > 3.0 || accel_screen_x < -3.0 ||
+            accel_screen_z > 3.0 || accel_screen_z < -3.0) {
+
+            if (360 - angle < 60 && angle > 0 && !is_enabled_tabletmode) {
+                set_tabletmode(1);
+            } else if (angle < 10 && angle > -60 && !is_enabled_tabletmode) {
+                set_tabletmode(1);
+            } else if (angle > 10 && angle < 180 && is_enabled_tabletmode) {
+                set_tabletmode(0);
+            }
+        }
+
+        debug_printf("angle_screen: %f\n", angle_screen);
+        debug_printf("angle_base: %f\n", angle_base);
+        debug_printf("diff: %f\n", angle);
+        debug_printf("tabletmode: %d\n", is_enabled_tabletmode);
+
         sleep(1);
     }
 
