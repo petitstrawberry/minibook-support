@@ -21,6 +21,7 @@ OBJECTS   = $(addprefix $(OBJDIR)/, $(notdir $(SOURCES:.c=.o)))
 DEPENDS   = $(OBJECTS:.o=.d)
 
 $(TARGET): $(OBJECTS) $(LIBS)
+	-mkdir -p $(dir $@)
 	ar rc $(TARGET) $(OBJECTS)
 	ranlib $(TARGET)
 
