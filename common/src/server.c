@@ -12,21 +12,26 @@
 
 // prepare socket
 int prepare_socket(const char *path) {
-    // ソケットの作成とパーミッションの設定例
     int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
     struct sockaddr_un addr;
     memset(&addr, 0, sizeof(struct sockaddr_un));
     addr.sun_family = AF_UNIX;
     strcpy(addr.sun_path, path);
     unlink(addr.sun_path);
+
     int ret =
         bind(sockfd, (struct sockaddr *)&addr, sizeof(struct sockaddr_un));
-    if (ret == 0) {
-        chmod(addr.sun_path, 0777);
-    } else {
+    if (ret == -1) {
         perror("bind");
         return -1;
     }
+
+    // Set permission
+    if (chmod(addr.sun_path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) == -1) {
+        perror("chmod");
+        return -1;
+    }
+
     return sockfd;
 }
 

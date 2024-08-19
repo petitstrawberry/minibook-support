@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <grp.h>
 #include <linux/input.h>
 #include <linux/uinput.h>
 #include <math.h>
@@ -21,6 +22,8 @@
 
 #define KEYBOARDD_SOCK "/var/run/keyboardd.sock"
 #define TRACKPOINTERD_SOCK "/var/run/trackpointerd.sock"
+
+#define TABLETMODED_SOCK "/var/run/tabletmoded.sock"
 
 // Accelerometer
 // For detect the tablet mode
@@ -200,7 +203,19 @@ int main(int argc, char *argv[]) {
     server_t server;
     server_addr = &server;
     // Setup the server
-    setup_server(&server, "/var/run/tabletmoded.sock", server_callback);
+    setup_server(&server, TABLETMODED_SOCK, server_callback);
+
+    // Tweaks the permission
+    // chown wheel group
+    struct group *grp = getgrnam("wheel");
+    if (grp == NULL) {
+        perror("getgrnam");
+        return -1;
+    }
+    if (chown(TABLETMODED_SOCK, -1, grp->gr_gid) == -1) {
+        perror("chown");
+        return -1;
+    }
 
     // Start the server
     if (start_server(&server) == 1) {
