@@ -11,11 +11,16 @@
 #include <unistd.h>
 
 #include "debug.h"
+#include "device.h"
 #include "server.h"
 #include "vdevice.h"
 
-#define INPUT_DEVICE "/dev/input/by-id/usb-0603_0003-event-mouse"
-#define VERSION "trackpointerd 0.1.0"
+#define MINIBOOK_INPUT_DEVICE "/dev/input/by-id/usb-0603_0003-event-mouse"
+#define MINIBOOKX_INPUT_DEVICE                                                 \
+    "/dev/input/by-path/"                                                      \
+    "pci-0000:00:15.3-platform-i2c_designware.3-event-mouse"
+
+#define VERSION "trackpointerd 1.1.0"
 
 server_t *server_addr = NULL;
 
@@ -147,7 +152,20 @@ int main(int argc, char *argv[]) {
     // Parse the command line arguments
     parse_args(argc, argv);
 
-    input = open(INPUT_DEVICE, O_RDWR);
+    // Check the device model
+    char device_model[256] = {0};
+    get_device_model(device_model, sizeof(device_model));
+    debug_printf("Device model: %s\n", device_model);
+    if (strstr(device_model, "MiniBook") == NULL) {
+        fprintf(stderr, "This device is not supported\n");
+        recovery_device();
+        return (EXIT_FAILURE);
+    }
+    if (strncmp(device_model, "MiniBook X", 10) == 0) {
+        input = open(MINIBOOKX_INPUT_DEVICE, O_RDWR);
+    } else {
+        input = open(MINIBOOK_INPUT_DEVICE, O_RDWR);
+    }
     if (input == -1) {
         perror("Cannot open the input device");
         return (EXIT_FAILURE);
