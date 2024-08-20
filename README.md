@@ -41,5 +41,6 @@ Tabletmoded is a daemon that triggers the tablet mode of the MiniBook.
 ```bash
 git clone https://github.com/petitstrawberry/minibook-support.git
 cd minibook-support
+make
 sudo make install
 ```
