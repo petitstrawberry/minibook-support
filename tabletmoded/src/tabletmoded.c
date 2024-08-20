@@ -17,6 +17,7 @@
 #include "debug.h"
 #include "server.h"
 #include "vdevice.h"
+#include "device.h"
 
 #define VERSION "tabletmoded 1.0.0"
 
@@ -209,8 +210,12 @@ int main(int argc, char *argv[]) {
     // chown wheel group
     struct group *grp = getgrnam("wheel");
     if (grp == NULL) {
+        grp = getgrnam("sudo"); // for Ubuntu
+    }
+    if (grp == NULL) {
         perror("getgrnam");
         perror("Skip the permission tweaks");
+    } else {
         if (chown(TABLETMODED_SOCK, -1, grp->gr_gid) == -1) {
             perror("chown");
             return -1;
@@ -222,6 +227,40 @@ int main(int argc, char *argv[]) {
         perror("Cannot start the server");
         recovery_device();
         return (EXIT_FAILURE);
+    }
+
+    // Check the device model
+    char device_model[256] = {0};
+    get_device_model(device_model, sizeof(device_model));
+    debug_printf("Device model: %s\n", device_model);
+    if (strstr(device_model, "MiniBook") == NULL) {
+        fprintf(stderr, "This device is not supported\n");
+        recovery_device();
+        return (EXIT_FAILURE);
+    }
+    // for MIniBook X (10-inch)
+    if (strncmp(device_model, "MiniBook X", 10) == 0) {
+        // Check the base accelerometer is available
+        struct stat st;
+        if (stat(ACCEL_BASE_PATH, &st) == -1) {
+            // Enable the accelerometer
+            // echo mxc4005 0x15 > /sys/bus/i2c/devices/i2c-0/new_device
+            FILE *fp = fopen("/sys/bus/i2c/devices/i2c-0/new_device", "w");
+            if (fp == NULL) {
+                perror("Cannot open the new_device");
+                recovery_device();
+                return (EXIT_FAILURE);
+            }
+            fprintf(fp, "mxc4005 0x15\n");
+            fclose(fp);
+            sleep(1); // Wait for the device
+        }
+        // Check the base accelerometer is available again
+        if (stat(ACCEL_BASE_PATH, &st) == -1) {
+            fprintf(stderr, "Cannot enable the base accelerometer\n");
+            recovery_device();
+            return (EXIT_FAILURE);
+        }
     }
 
     // Accelerometer scale
