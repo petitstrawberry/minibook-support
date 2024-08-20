@@ -210,11 +210,11 @@ int main(int argc, char *argv[]) {
     struct group *grp = getgrnam("wheel");
     if (grp == NULL) {
         perror("getgrnam");
-        return -1;
-    }
-    if (chown(TABLETMODED_SOCK, -1, grp->gr_gid) == -1) {
-        perror("chown");
-        return -1;
+        perror("Skip the permission tweaks");
+        if (chown(TABLETMODED_SOCK, -1, grp->gr_gid) == -1) {
+            perror("chown");
+            return -1;
+        }
     }
 
     // Start the server
