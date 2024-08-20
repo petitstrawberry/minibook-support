@@ -308,6 +308,13 @@ int main(int argc, char *argv[]) {
             recovery_device();
             return (EXIT_FAILURE);
         }
+        FILE *fp_screen_y = fopen(ACCEL_SCREEN_PATH "in_accel_y_raw", "r");
+        if (fp_screen_y == NULL) {
+            perror("Cannot open the accel y: " ACCEL_SCREEN_PATH
+                   "in_accel_y_raw");
+            recovery_device();
+            return (EXIT_FAILURE);
+        }
         FILE *fp_screen_z = fopen(ACCEL_SCREEN_PATH "in_accel_z_raw", "r");
         if (fp_screen_z == NULL) {
             perror("Cannot open the accel z: " ACCEL_SCREEN_PATH
@@ -322,6 +329,13 @@ int main(int argc, char *argv[]) {
             recovery_device();
             return (EXIT_FAILURE);
         }
+        FILE *fp_base_y = fopen(ACCEL_BASE_PATH "in_accel_y_raw", "r");
+        if (fp_base_y == NULL) {
+            perror("Cannot open the accel z: " ACCEL_BASE_PATH
+                   "in_accel_y_raw");
+            recovery_device();
+            return (EXIT_FAILURE);
+        }
         FILE *fp_base_z = fopen(ACCEL_BASE_PATH "in_accel_z_raw", "r");
         if (fp_base_z == NULL) {
             perror("Cannot open the accel z: " ACCEL_BASE_PATH
@@ -331,24 +345,32 @@ int main(int argc, char *argv[]) {
         }
         // Read the accelerometer
         fscanf(fp_screen_x, "%lf", &accel_screen_x);
+        fscanf(fp_screen_y, "%lf", &accel_screen_y);
         fscanf(fp_screen_z, "%lf", &accel_screen_z);
         fscanf(fp_base_x, "%lf", &accel_base_x);
+        fscanf(fp_base_y, "%lf", &accel_base_y);
         fscanf(fp_base_z, "%lf", &accel_base_z);
 
         // Close the files
         fclose(fp_screen_x);
+        fclose(fp_screen_y);
         fclose(fp_screen_z);
         fclose(fp_base_x);
+        fclose(fp_base_y);
         fclose(fp_base_z);
 
         // Scale the accelerometer
         accel_screen_x *= accel_screen_scale;
+        accel_screen_y *= accel_screen_scale;
         accel_screen_z *= accel_screen_scale;
         accel_base_x *= accel_base_scale;
+        accel_base_y *= accel_base_scale;
         accel_base_z *= accel_base_scale;
 
-        debug_printf("Screen: x:%f z:%f\n", accel_screen_x, accel_screen_z);
-        debug_printf("Base: x:%f z:%f\n", accel_base_x, accel_base_z);
+        debug_printf("Screen: x:%f y:%f z:%f\n", accel_screen_x, accel_screen_y,
+                     accel_screen_z);
+        debug_printf("Base  : x:%f y:%f z:%f\n", accel_base_x, accel_base_y,
+                     accel_base_z);
 
         // Get the angle from x, z
         double angle_screen =
