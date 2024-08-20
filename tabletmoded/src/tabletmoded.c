@@ -15,9 +15,9 @@
 #include <unistd.h>
 
 #include "debug.h"
+#include "device.h"
 #include "server.h"
 #include "vdevice.h"
-#include "device.h"
 
 #define VERSION "tabletmoded 1.0.0"
 
