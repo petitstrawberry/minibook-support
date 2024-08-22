@@ -61,19 +61,8 @@ int new_device() {
         exit(EXIT_FAILURE);
     }
 
-    // Enable the events of the keyboard
-    // Enable the synchronization events
-    ioctl(fd, UI_SET_EVBIT, EV_SYN);
-
-    // Enable the miscellaneous events
-    ioctl(fd, UI_SET_EVBIT, EV_MSC);
-    ioctl(fd, UI_SET_MSCBIT, MSC_SCAN);
-
-    // Enable the keys of the keyboard
-    ioctl(fd, UI_SET_EVBIT, EV_KEY);
-    for (int i = 0; i < 256; i++) {
-        ioctl(fd, UI_SET_KEYBIT, i);
-    }
+    // Clone the enabled event types and codes of the device
+    clone_enabled_event_types_and_codes(input, fd);
 
     // Setup the device
     struct uinput_setup uisetup = {0};
@@ -223,6 +212,12 @@ int main(int argc, char *argv[]) {
             }
             break;
         default:
+            debug_printf("Unknown event: %d %d %d\n", event.type, event.code,
+                         event.value);
+            // passthrough
+            if (is_enabled_passthrough) {
+                emit(output, event.type, event.code, event.value);
+            }
             break;
         }
     }

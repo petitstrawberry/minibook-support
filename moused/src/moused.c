@@ -11,11 +11,16 @@
 #include <unistd.h>
 
 #include "debug.h"
+#include "device.h"
 #include "server.h"
 #include "vdevice.h"
 
-#define INPUT_DEVICE "/dev/input/by-id/usb-0603_0003-event-mouse"
-#define VERSION "trackpointerd 0.1.0"
+#define MINIBOOK_INPUT_DEVICE "/dev/input/by-id/usb-0603_0003-event-mouse"
+#define MINIBOOKX_INPUT_DEVICE                                                 \
+    "/dev/input/by-path/"                                                      \
+    "pci-0000:00:15.3-platform-i2c_designware.3-event-mouse"
+
+#define VERSION "moused 1.1.0"
 
 server_t *server_addr = NULL;
 
@@ -54,23 +59,8 @@ int new_device() {
         exit(EXIT_FAILURE);
     }
 
-    // Enable the synchronization events
-    ioctl(fd, UI_SET_EVBIT, EV_SYN);
-
-    // Enable the miscellaneous events
-    ioctl(fd, UI_SET_EVBIT, EV_MSC);
-    ioctl(fd, UI_SET_MSCBIT, MSC_SCAN);
-
-    // Enable the buttons of the pointer
-    ioctl(fd, UI_SET_EVBIT, EV_KEY);
-    ioctl(fd, UI_SET_KEYBIT, BTN_LEFT);
-    ioctl(fd, UI_SET_KEYBIT, BTN_MIDDLE);
-    ioctl(fd, UI_SET_KEYBIT, BTN_RIGHT);
-
-    // Enable the pointer
-    ioctl(fd, UI_SET_EVBIT, EV_REL);
-    ioctl(fd, UI_SET_RELBIT, REL_X);
-    ioctl(fd, UI_SET_RELBIT, REL_Y);
+    // Clone the enabled event types and codes of the device
+    clone_enabled_event_types_and_codes(input, fd);
 
     // Setup the device
     struct uinput_setup uisetup = {0};
@@ -97,7 +87,7 @@ int new_device() {
 
 // Print the help message
 void print_help() {
-    printf("Usage: ./trackpointerd [-d] [-c] [-h] [--version]\n");
+    printf("Usage: ./moused [-d] [-c] [-h] [--version]\n");
     printf("Options:\n");
     printf("  -d: Enable debug mode\n");
     printf("  -c: Enable calibration mode\n");
@@ -147,7 +137,21 @@ int main(int argc, char *argv[]) {
     // Parse the command line arguments
     parse_args(argc, argv);
 
-    input = open(INPUT_DEVICE, O_RDWR);
+    // Check the device model
+    char device_model[256] = {0};
+    get_device_model(device_model, sizeof(device_model));
+    debug_printf("Device model: %s\n", device_model);
+    if (strstr(device_model, "MiniBook") == NULL) {
+        fprintf(stderr, "This device is not supported\n");
+        recovery_device();
+        return (EXIT_FAILURE);
+    }
+    if (strncmp(device_model, "MiniBook X", 10) == 0) {
+        input = open(MINIBOOKX_INPUT_DEVICE, O_RDWR);
+        is_enabled_calibration = 0;
+    } else {
+        input = open(MINIBOOK_INPUT_DEVICE, O_RDWR);
+    }
     if (input == -1) {
         perror("Cannot open the input device");
         return (EXIT_FAILURE);
@@ -170,7 +174,7 @@ int main(int argc, char *argv[]) {
     server_t server;
     server_addr = &server;
     // Setup the server
-    setup_server(&server, "/var/run/trackpointerd.sock", server_callback);
+    setup_server(&server, "/var/run/moused.sock", server_callback);
 
     // Start the server
     if (start_server(&server) == 1) {
@@ -197,24 +201,15 @@ int main(int argc, char *argv[]) {
             switch (event.type) {
             case EV_SYN:
                 debug_printf("EV_SYN: %d %d\n", event.code, event.value);
-                // passthrough
-                if (is_enabled_passthrough) {
-                    emit(output, event.type, event.code, event.value);
-                }
+                emit(output, event.type, event.code, event.value);
                 break;
             case EV_MSC:
                 debug_printf("EV_MSC: %d %d\n", event.code, event.value);
-                // passthrough
-                if (is_enabled_passthrough) {
-                    emit(output, event.type, event.code, event.value);
-                }
+                emit(output, event.type, event.code, event.value);
                 break;
             case EV_KEY:
                 debug_printf("EV_KEY: %d %d\n", event.code, event.value);
-                // passthrough
-                if (is_enabled_passthrough) {
-                    emit(output, event.type, event.code, event.value);
-                }
+                emit(output, event.type, event.code, event.value);
                 break;
             case EV_REL:
                 // Calibrate the pointer
@@ -248,6 +243,14 @@ int main(int argc, char *argv[]) {
                     }
                     emit(output, event.type, event.code, rel_y);
                 }
+                break;
+            case EV_ABS:
+                debug_printf("EV_ABS: %d %d\n", event.code, event.value);
+                emit(output, event.type, event.code, event.value);
+                break;
+            default:
+                debug_printf("Other: %d %d\n", event.code, event.value);
+                emit(output, event.type, event.code, event.value);
                 break;
             }
         }

@@ -3,33 +3,33 @@ Softwares for CHUWI MiniBook (8-inch UMPC)
 
 ## Softwares
 
-- [x] trackpointerd
+- [x] moused
 - [x] keyboardd
 - [x] tabletmoded
 
-### trackpointerd
+### moused
 
-Trackpointerd is a daemon that manages the trackpointer of the MiniBook. 
+moused is a daemon that manages the trackpointer / trackpad of the MiniBook. 
 
-- Calibrate the trackpointer
-- Switch enable/disable the trackpointer
+- Calibrate the trackpointer / trackpad
+- Switch enable/disable the trackpointer / trackpad
 
 ### keyboardd
 
-Keyboardd is a daemon that manages the keyboard of the MiniBook.
+keyboardd is a daemon that manages the keyboard of the MiniBook.
 
 - Switch enable/disable the keyboard
 
 ### tabletmoded
 
-Tabletmoded is a daemon that triggers the tablet mode of the MiniBook.
+tabletmoded is a daemon that triggers the tablet mode of the MiniBook.
 
 - Auto detect the tablet mode
 - Switch enable/disable the tablet mode
   - Trigger the tablet mode when the MiniBook is folded
   - Untrigger the tablet mode when the MiniBook is unfolded
   - Disable the keyboard using keyboardd when the tablet mode is triggered and enable the keyboard when the tablet mode is untriggered
-  - Disable the trackpointer using trackpointerd when the tablet mode is triggered and enable the trackpointer when the tablet mode is untriggered
+  - Disable the mouse using moused when the tablet mode is triggered and enable the mouse when the tablet mode is untriggered
 
 ## Requirements
 
