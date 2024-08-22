@@ -22,7 +22,7 @@
 #define VERSION "tabletmoded 1.0.0"
 
 #define KEYBOARDD_SOCK "/var/run/keyboardd.sock"
-#define TRACKPOINTERD_SOCK "/var/run/trackpointerd.sock"
+#define mouseD_SOCK "/var/run/moused.sock"
 
 #define TABLETMODED_SOCK "/var/run/tabletmoded.sock"
 
@@ -161,8 +161,8 @@ void set_tabletmode(int value) {
     if (send_command(KEYBOARDD_SOCK, 0, !value) == -1) {
         perror("Cannot send the command to the keyboardd");
     }
-    if (send_command(TRACKPOINTERD_SOCK, 0, !value) == -1) {
-        perror("Cannot send the command to the trackpointerd");
+    if (send_command(mouseD_SOCK, 0, !value) == -1) {
+        perror("Cannot send the command to the moused");
     }
     is_enabled_tabletmode = value;
     emit(output, EV_SW, SW_TABLET_MODE, value);

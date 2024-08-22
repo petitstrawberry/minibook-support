@@ -20,7 +20,7 @@
     "/dev/input/by-path/"                                                      \
     "pci-0000:00:15.3-platform-i2c_designware.3-event-mouse"
 
-#define VERSION "trackpointerd 1.1.0"
+#define VERSION "moused 1.1.0"
 
 server_t *server_addr = NULL;
 
@@ -102,7 +102,7 @@ int new_device() {
 
 // Print the help message
 void print_help() {
-    printf("Usage: ./trackpointerd [-d] [-c] [-h] [--version]\n");
+    printf("Usage: ./moused [-d] [-c] [-h] [--version]\n");
     printf("Options:\n");
     printf("  -d: Enable debug mode\n");
     printf("  -c: Enable calibration mode\n");
@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
     server_t server;
     server_addr = &server;
     // Setup the server
-    setup_server(&server, "/var/run/trackpointerd.sock", server_callback);
+    setup_server(&server, "/var/run/moused.sock", server_callback);
 
     // Start the server
     if (start_server(&server) == 1) {

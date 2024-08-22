@@ -20,7 +20,7 @@ echo "Stopping keyboardd service"
 systemctl stop keyboardd
 systemctl disable keyboardd
 
-# Remove the trackpointerd script from /usr/bin
+# Remove the moused script from /usr/bin
 echo "Removing keyboardd from /usr/bin"
 rm /usr/bin/keyboardd
 

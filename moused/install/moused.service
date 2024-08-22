@@ -1,0 +1,13 @@
+[Unit]
+Description=Daemon for the mouse of the MiniBook
+ConditionPathExists=/usr/bin/
+After=dev-input-mouse0.device
+
+[Service]
+
+ExecStart=/usr/bin/moused -c
+Restart=no
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
