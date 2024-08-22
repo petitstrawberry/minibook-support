@@ -22,7 +22,7 @@ int is_enabled_bit(u_int8_t *bits, int bit) {
 
 // Clone the enabled event types and codes of the device
 void clone_enabled_event_types_and_codes(int fd, int fd_clone) {
-
+    debug_printf("Making the clone of the device\n");
     // Get the event types
     u_int8_t event_types[EV_MAX / 8 + 1];
     memset(event_types, 0, sizeof(event_types));

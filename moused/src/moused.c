@@ -59,23 +59,8 @@ int new_device() {
         exit(EXIT_FAILURE);
     }
 
-    // Enable the synchronization events
-    ioctl(fd, UI_SET_EVBIT, EV_SYN);
-
-    // Enable the miscellaneous events
-    ioctl(fd, UI_SET_EVBIT, EV_MSC);
-    ioctl(fd, UI_SET_MSCBIT, MSC_SCAN);
-
-    // Enable the buttons of the pointer
-    ioctl(fd, UI_SET_EVBIT, EV_KEY);
-    ioctl(fd, UI_SET_KEYBIT, BTN_LEFT);
-    ioctl(fd, UI_SET_KEYBIT, BTN_MIDDLE);
-    ioctl(fd, UI_SET_KEYBIT, BTN_RIGHT);
-
-    // Enable the pointer
-    ioctl(fd, UI_SET_EVBIT, EV_REL);
-    ioctl(fd, UI_SET_RELBIT, REL_X);
-    ioctl(fd, UI_SET_RELBIT, REL_Y);
+    // Clone the enabled event types and codes of the device
+    clone_enabled_event_types_and_codes(input, fd);
 
     // Setup the device
     struct uinput_setup uisetup = {0};
@@ -163,6 +148,7 @@ int main(int argc, char *argv[]) {
     }
     if (strncmp(device_model, "MiniBook X", 10) == 0) {
         input = open(MINIBOOKX_INPUT_DEVICE, O_RDWR);
+        is_enabled_calibration = 0;
     } else {
         input = open(MINIBOOK_INPUT_DEVICE, O_RDWR);
     }
@@ -215,24 +201,15 @@ int main(int argc, char *argv[]) {
             switch (event.type) {
             case EV_SYN:
                 debug_printf("EV_SYN: %d %d\n", event.code, event.value);
-                // passthrough
-                if (is_enabled_passthrough) {
-                    emit(output, event.type, event.code, event.value);
-                }
+                emit(output, event.type, event.code, event.value);
                 break;
             case EV_MSC:
                 debug_printf("EV_MSC: %d %d\n", event.code, event.value);
-                // passthrough
-                if (is_enabled_passthrough) {
-                    emit(output, event.type, event.code, event.value);
-                }
+                emit(output, event.type, event.code, event.value);
                 break;
             case EV_KEY:
                 debug_printf("EV_KEY: %d %d\n", event.code, event.value);
-                // passthrough
-                if (is_enabled_passthrough) {
-                    emit(output, event.type, event.code, event.value);
-                }
+                emit(output, event.type, event.code, event.value);
                 break;
             case EV_REL:
                 // Calibrate the pointer
@@ -266,6 +243,14 @@ int main(int argc, char *argv[]) {
                     }
                     emit(output, event.type, event.code, rel_y);
                 }
+                break;
+            case EV_ABS:
+                debug_printf("EV_ABS: %d %d\n", event.code, event.value);
+                emit(output, event.type, event.code, event.value);
+                break;
+            default:
+                debug_printf("Other: %d %d\n", event.code, event.value);
+                emit(output, event.type, event.code, event.value);
                 break;
             }
         }
