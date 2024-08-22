@@ -41,6 +41,7 @@ void clone_enabled_event_types_and_codes(int fd, int fd_clone) {
             for (int event_code = 0; event_code < KEY_MAX; event_code++) {
                 if (is_enabled_bit(event_codes, event_code)) {
                     debug_printf("  code: %d\n", event_code);
+
                     ioctl(fd_clone,
                           _IOW(UINPUT_IOCTL_BASE, 100 + event_type, int),
                           event_code);
@@ -49,9 +50,9 @@ void clone_enabled_event_types_and_codes(int fd, int fd_clone) {
                         // Get the abs info
                         struct input_absinfo absinfo;
                         memset(&absinfo, 0, sizeof(absinfo));
-                        ioctl(fd, EVIOCGABS(event_code), absinfo);
-                        // Set the abs info
-                        ioctl(fd_clone, EVIOCSABS(event_code), absinfo);
+                        if (ioctl(fd, EVIOCGABS(event_code), &absinfo) < 0) {
+                            perror("ioctl: EVIOCGABS");
+                        }
 
                         // Print the abs info
                         debug_printf("    absinfo: \n");
@@ -60,7 +61,17 @@ void clone_enabled_event_types_and_codes(int fd, int fd_clone) {
                         debug_printf("      maximum: %d\n", absinfo.maximum);
                         debug_printf("      fuzz: %d\n", absinfo.fuzz);
                         debug_printf("      flat: %d\n", absinfo.flat);
-                        debug_printf("      resolution: %d\n", absinfo.resolution);
+                        debug_printf("      resolution: %d\n",
+                                     absinfo.resolution);
+
+                        struct uinput_abs_setup abs_setup = {
+                            .code = event_code,
+                            .absinfo = absinfo,
+                        };
+
+                        if (ioctl(fd_clone, UI_ABS_SETUP, &abs_setup) < 0) {
+                            perror("ioctl: UI_ABS_SETUP");
+                        }
                     }
                 }
             }
