@@ -24,7 +24,7 @@
 #include "vdevice.h"
 
 #define INPUT_DEVICE "/dev/input/by-path/platform-i8042-serio-0-event-kbd"
-#define VERSION "keyboardd 1.0.0"
+#define VERSION "keyboardd 1.1.0"
 
 server_t *server_addr = NULL;
 
