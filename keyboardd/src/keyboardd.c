@@ -17,6 +17,7 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "debug.h"
 #include "server.h"
@@ -161,6 +162,7 @@ int main(int argc, char *argv[]) {
     // Parse the command line arguments
     parse_args(argc, argv);
 
+    printf("Keyboard daemon started\n");
     input = open(INPUT_DEVICE, O_RDWR);
     if (input == -1) {
         perror("Cannot open the input device");
@@ -173,7 +175,45 @@ int main(int argc, char *argv[]) {
         return (EXIT_FAILURE);
     }
 
-    sleep(1);
+    // Wait until the all keys are released
+    debug_printf("Wait until all keys are released\n");
+    // Set the input device to non-blocking mode
+    fcntl(input, F_SETFL, O_NONBLOCK);
+    int pressing_count = 0;
+    int count = 0;
+    while (pressing_count != 0 || count < 10) {
+        struct input_event event;
+        ssize_t result = read(input, &event, sizeof(event));
+        if (result == -1) {
+            perror("read");
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                count++;
+                usleep(100000); // 100ms
+                continue;
+            }
+            recovery_device();
+            exit(EXIT_FAILURE);
+        } else if (result == sizeof(event)) {
+            if (event.type == EV_KEY) {
+                if (event.value > 0) {
+                    if (pressing_keys[event.code] == 0) {
+                        press_key(event.code);
+                        pressing_count++;
+                    }
+                } else if (event.value == 0) {
+                    if (pressing_keys[event.code] == 1) {
+                        release_key(event.code);
+                        pressing_count--;
+                    }
+                }
+            }
+        }
+        count++;
+        usleep(100000); // 100ms
+    }
+    debug_printf("All keys are released\n");
+    // Set the input device to blocking mode
+    fcntl(input, F_SETFL, 0);
 
     // Disable the input device
     ioctl(input, EVIOCGRAB, 1);
@@ -192,8 +232,7 @@ int main(int argc, char *argv[]) {
         recovery_device();
         return (EXIT_FAILURE);
     }
-
-    printf("Keyboard daemon started\n");
+    printf("Virtual Keyboard is running\n");
 
     // Main loop
     while (1) {
