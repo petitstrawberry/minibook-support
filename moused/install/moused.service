@@ -1,7 +1,8 @@
 [Unit]
 Description=Daemon for the mouse of the MiniBook
 ConditionPathExists=/usr/bin/
-After=dev-input-mouse0.device
+Requires=sysinit.target
+After=sysinit.target basic.target
 
 [Service]
 
