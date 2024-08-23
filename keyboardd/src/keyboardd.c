@@ -116,6 +116,27 @@ void parse_args(int argc, char *argv[]) {
     }
 }
 
+// Manage the press / release of the key
+int pressing_keys[KEY_MAX] = {0};
+void press_key(int key) {
+    debug_printf("Press key: %d\n", key);
+    pressing_keys[key] = 1;
+}
+void release_key(int key) {
+    debug_printf("Release key: %d\n", key);
+    pressing_keys[key] = 0;
+}
+void release_unreleased_keys() {
+    for (int i = 0; i < KEY_MAX; i++) {
+        if (pressing_keys[i]) {
+            release_key(i);
+            // Release the key
+            emit(output, EV_KEY, i, 0);
+            emit(output, EV_SYN, SYN_REPORT, 0);
+        }
+    }
+}
+
 // Server callback
 uint8_t server_callback(uint8_t type, uint8_t data) {
     debug_printf("Server callback: %d %d\n", type, data);
@@ -123,6 +144,9 @@ uint8_t server_callback(uint8_t type, uint8_t data) {
     case 0:
         debug_printf("Set passthrough: %d\n", data);
         is_enabled_passthrough = data;
+        if (!is_enabled_passthrough) {
+            release_unreleased_keys();
+        }
         return 0;
     case 1:
         return (uint8_t)is_enabled_passthrough;
@@ -189,9 +213,13 @@ int main(int argc, char *argv[]) {
         switch (event.type) {
         case EV_KEY:
             debug_printf("EV_KEY: %d %d\n", event.code, event.value);
-
             // passthrough
             if (is_enabled_passthrough) {
+                if (event.value > 0) {
+                    press_key(event.code);
+                } else if (event.value == 0) {
+                    release_key(event.code);
+                }
                 emit(output, event.type, event.code, event.value);
             }
             break;
