@@ -2,11 +2,8 @@
 Description=Daemon for the tabletmode of the MiniBook
 ConditionPathExists=/usr/bin/
 
-Requires=trackpointerd.service keyboardd.service
-After=trackpointerd.service keyboardd.service
-After=network.target
-After=dev-iio\x2ddevice0.device
-After=dev-iio\x2ddevice1.device
+Requires=moused.service keyboardd.service sysinit.target
+After=moused.service keyboardd.service sysinit.target basic.target
 
 [Service]
 

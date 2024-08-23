@@ -17,13 +17,14 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "debug.h"
 #include "server.h"
 #include "vdevice.h"
 
 #define INPUT_DEVICE "/dev/input/by-path/platform-i8042-serio-0-event-kbd"
-#define VERSION "keyboardd 1.0.0"
+#define VERSION "keyboardd 1.1.0"
 
 server_t *server_addr = NULL;
 
@@ -61,19 +62,8 @@ int new_device() {
         exit(EXIT_FAILURE);
     }
 
-    // Enable the events of the keyboard
-    // Enable the synchronization events
-    ioctl(fd, UI_SET_EVBIT, EV_SYN);
-
-    // Enable the miscellaneous events
-    ioctl(fd, UI_SET_EVBIT, EV_MSC);
-    ioctl(fd, UI_SET_MSCBIT, MSC_SCAN);
-
-    // Enable the keys of the keyboard
-    ioctl(fd, UI_SET_EVBIT, EV_KEY);
-    for (int i = 0; i < 256; i++) {
-        ioctl(fd, UI_SET_KEYBIT, i);
-    }
+    // Clone the enabled event types and codes of the device
+    clone_enabled_event_types_and_codes(input, fd);
 
     // Setup the device
     struct uinput_setup uisetup = {0};
@@ -127,6 +117,27 @@ void parse_args(int argc, char *argv[]) {
     }
 }
 
+// Manage the press / release of the key
+int pressing_keys[KEY_MAX] = {0};
+void press_key(int key) {
+    debug_printf("Press key: %d\n", key);
+    pressing_keys[key] = 1;
+}
+void release_key(int key) {
+    debug_printf("Release key: %d\n", key);
+    pressing_keys[key] = 0;
+}
+void release_unreleased_keys() {
+    for (int i = 0; i < KEY_MAX; i++) {
+        if (pressing_keys[i]) {
+            release_key(i);
+            // Release the key
+            emit(output, EV_KEY, i, 0);
+            emit(output, EV_SYN, SYN_REPORT, 0);
+        }
+    }
+}
+
 // Server callback
 uint8_t server_callback(uint8_t type, uint8_t data) {
     debug_printf("Server callback: %d %d\n", type, data);
@@ -134,6 +145,9 @@ uint8_t server_callback(uint8_t type, uint8_t data) {
     case 0:
         debug_printf("Set passthrough: %d\n", data);
         is_enabled_passthrough = data;
+        if (!is_enabled_passthrough) {
+            release_unreleased_keys();
+        }
         return 0;
     case 1:
         return (uint8_t)is_enabled_passthrough;
@@ -148,6 +162,7 @@ int main(int argc, char *argv[]) {
     // Parse the command line arguments
     parse_args(argc, argv);
 
+    printf("Keyboard daemon started\n");
     input = open(INPUT_DEVICE, O_RDWR);
     if (input == -1) {
         perror("Cannot open the input device");
@@ -160,7 +175,45 @@ int main(int argc, char *argv[]) {
         return (EXIT_FAILURE);
     }
 
-    sleep(1);
+    // Wait until the all keys are released
+    debug_printf("Wait until all keys are released\n");
+    // Set the input device to non-blocking mode
+    fcntl(input, F_SETFL, O_NONBLOCK);
+    int pressing_count = 0;
+    int count = 0;
+    while (pressing_count != 0 || count < 10) {
+        struct input_event event;
+        ssize_t result = read(input, &event, sizeof(event));
+        if (result == -1) {
+            perror("read");
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                count++;
+                usleep(100000); // 100ms
+                continue;
+            }
+            recovery_device();
+            exit(EXIT_FAILURE);
+        } else if (result == sizeof(event)) {
+            if (event.type == EV_KEY) {
+                if (event.value > 0) {
+                    if (pressing_keys[event.code] == 0) {
+                        press_key(event.code);
+                        pressing_count++;
+                    }
+                } else if (event.value == 0) {
+                    if (pressing_keys[event.code] == 1) {
+                        release_key(event.code);
+                        pressing_count--;
+                    }
+                }
+            }
+        }
+        count++;
+        usleep(100000); // 100ms
+    }
+    debug_printf("All keys are released\n");
+    // Set the input device to blocking mode
+    fcntl(input, F_SETFL, 0);
 
     // Disable the input device
     ioctl(input, EVIOCGRAB, 1);
@@ -179,8 +232,7 @@ int main(int argc, char *argv[]) {
         recovery_device();
         return (EXIT_FAILURE);
     }
-
-    printf("Keyboard daemon started\n");
+    printf("Virtual Keyboard is running\n");
 
     // Main loop
     while (1) {
@@ -200,9 +252,13 @@ int main(int argc, char *argv[]) {
         switch (event.type) {
         case EV_KEY:
             debug_printf("EV_KEY: %d %d\n", event.code, event.value);
-
             // passthrough
             if (is_enabled_passthrough) {
+                if (event.value > 0) {
+                    press_key(event.code);
+                } else if (event.value == 0) {
+                    release_key(event.code);
+                }
                 emit(output, event.type, event.code, event.value);
             }
             break;
@@ -223,6 +279,12 @@ int main(int argc, char *argv[]) {
             }
             break;
         default:
+            debug_printf("Unknown event: %d %d %d\n", event.type, event.code,
+                         event.value);
+            // passthrough
+            if (is_enabled_passthrough) {
+                emit(output, event.type, event.code, event.value);
+            }
             break;
         }
     }

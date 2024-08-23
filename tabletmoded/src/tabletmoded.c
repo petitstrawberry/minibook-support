@@ -15,13 +15,14 @@
 #include <unistd.h>
 
 #include "debug.h"
+#include "device.h"
 #include "server.h"
 #include "vdevice.h"
 
-#define VERSION "tabletmoded 1.0.0"
+#define VERSION "tabletmoded 1.1.0"
 
 #define KEYBOARDD_SOCK "/var/run/keyboardd.sock"
-#define TRACKPOINTERD_SOCK "/var/run/trackpointerd.sock"
+#define mouseD_SOCK "/var/run/moused.sock"
 
 #define TABLETMODED_SOCK "/var/run/tabletmoded.sock"
 
@@ -160,8 +161,8 @@ void set_tabletmode(int value) {
     if (send_command(KEYBOARDD_SOCK, 0, !value) == -1) {
         perror("Cannot send the command to the keyboardd");
     }
-    if (send_command(TRACKPOINTERD_SOCK, 0, !value) == -1) {
-        perror("Cannot send the command to the trackpointerd");
+    if (send_command(mouseD_SOCK, 0, !value) == -1) {
+        perror("Cannot send the command to the moused");
     }
     is_enabled_tabletmode = value;
     emit(output, EV_SW, SW_TABLET_MODE, value);
@@ -209,12 +210,16 @@ int main(int argc, char *argv[]) {
     // chown wheel group
     struct group *grp = getgrnam("wheel");
     if (grp == NULL) {
-        perror("getgrnam");
-        return -1;
+        grp = getgrnam("sudo"); // for Ubuntu
     }
-    if (chown(TABLETMODED_SOCK, -1, grp->gr_gid) == -1) {
-        perror("chown");
-        return -1;
+    if (grp == NULL) {
+        perror("getgrnam");
+        perror("Skip the permission tweaks");
+    } else {
+        if (chown(TABLETMODED_SOCK, -1, grp->gr_gid) == -1) {
+            perror("chown");
+            return -1;
+        }
     }
 
     // Start the server
@@ -222,6 +227,40 @@ int main(int argc, char *argv[]) {
         perror("Cannot start the server");
         recovery_device();
         return (EXIT_FAILURE);
+    }
+
+    // Check the device model
+    char device_model[256] = {0};
+    get_device_model(device_model, sizeof(device_model));
+    debug_printf("Device model: %s\n", device_model);
+    if (strstr(device_model, "MiniBook") == NULL) {
+        fprintf(stderr, "This device is not supported\n");
+        recovery_device();
+        return (EXIT_FAILURE);
+    }
+    // for MIniBook X (10-inch)
+    if (strncmp(device_model, "MiniBook X", 10) == 0) {
+        // Check the base accelerometer is available
+        struct stat st;
+        if (stat(ACCEL_BASE_PATH, &st) == -1) {
+            // Enable the accelerometer
+            // echo mxc4005 0x15 > /sys/bus/i2c/devices/i2c-0/new_device
+            FILE *fp = fopen("/sys/bus/i2c/devices/i2c-0/new_device", "w");
+            if (fp == NULL) {
+                perror("Cannot open the new_device");
+                recovery_device();
+                return (EXIT_FAILURE);
+            }
+            fprintf(fp, "mxc4005 0x15\n");
+            fclose(fp);
+            sleep(1); // Wait for the device
+        }
+        // Check the base accelerometer is available again
+        if (stat(ACCEL_BASE_PATH, &st) == -1) {
+            fprintf(stderr, "Cannot enable the base accelerometer\n");
+            recovery_device();
+            return (EXIT_FAILURE);
+        }
     }
 
     // Accelerometer scale
@@ -269,6 +308,13 @@ int main(int argc, char *argv[]) {
             recovery_device();
             return (EXIT_FAILURE);
         }
+        FILE *fp_screen_y = fopen(ACCEL_SCREEN_PATH "in_accel_y_raw", "r");
+        if (fp_screen_y == NULL) {
+            perror("Cannot open the accel y: " ACCEL_SCREEN_PATH
+                   "in_accel_y_raw");
+            recovery_device();
+            return (EXIT_FAILURE);
+        }
         FILE *fp_screen_z = fopen(ACCEL_SCREEN_PATH "in_accel_z_raw", "r");
         if (fp_screen_z == NULL) {
             perror("Cannot open the accel z: " ACCEL_SCREEN_PATH
@@ -283,6 +329,13 @@ int main(int argc, char *argv[]) {
             recovery_device();
             return (EXIT_FAILURE);
         }
+        FILE *fp_base_y = fopen(ACCEL_BASE_PATH "in_accel_y_raw", "r");
+        if (fp_base_y == NULL) {
+            perror("Cannot open the accel z: " ACCEL_BASE_PATH
+                   "in_accel_y_raw");
+            recovery_device();
+            return (EXIT_FAILURE);
+        }
         FILE *fp_base_z = fopen(ACCEL_BASE_PATH "in_accel_z_raw", "r");
         if (fp_base_z == NULL) {
             perror("Cannot open the accel z: " ACCEL_BASE_PATH
@@ -292,24 +345,32 @@ int main(int argc, char *argv[]) {
         }
         // Read the accelerometer
         fscanf(fp_screen_x, "%lf", &accel_screen_x);
+        fscanf(fp_screen_y, "%lf", &accel_screen_y);
         fscanf(fp_screen_z, "%lf", &accel_screen_z);
         fscanf(fp_base_x, "%lf", &accel_base_x);
+        fscanf(fp_base_y, "%lf", &accel_base_y);
         fscanf(fp_base_z, "%lf", &accel_base_z);
 
         // Close the files
         fclose(fp_screen_x);
+        fclose(fp_screen_y);
         fclose(fp_screen_z);
         fclose(fp_base_x);
+        fclose(fp_base_y);
         fclose(fp_base_z);
 
         // Scale the accelerometer
         accel_screen_x *= accel_screen_scale;
+        accel_screen_y *= accel_screen_scale;
         accel_screen_z *= accel_screen_scale;
         accel_base_x *= accel_base_scale;
+        accel_base_y *= accel_base_scale;
         accel_base_z *= accel_base_scale;
 
-        debug_printf("Screen: x:%f z:%f\n", accel_screen_x, accel_screen_z);
-        debug_printf("Base: x:%f z:%f\n", accel_base_x, accel_base_z);
+        debug_printf("Screen: x:%f y:%f z:%f\n", accel_screen_x, accel_screen_y,
+                     accel_screen_z);
+        debug_printf("Base  : x:%f y:%f z:%f\n", accel_base_x, accel_base_y,
+                     accel_base_z);
 
         // Get the angle from x, z
         double angle_screen =
