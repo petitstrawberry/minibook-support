@@ -197,62 +197,74 @@ int main(int argc, char *argv[]) {
             recovery_device();
             exit(EXIT_FAILURE);
         }
-        if (is_enabled_passthrough) {
-            switch (event.type) {
-            case EV_SYN:
-                debug_printf("EV_SYN: %d %d\n", event.code, event.value);
+        switch (event.type) {
+        case EV_SYN:
+            debug_printf("EV_SYN: %d %d\n", event.code, event.value);
+            if (is_enabled_passthrough) {
                 emit(output, event.type, event.code, event.value);
-                break;
-            case EV_MSC:
-                debug_printf("EV_MSC: %d %d\n", event.code, event.value);
-                emit(output, event.type, event.code, event.value);
-                break;
-            case EV_KEY:
-                debug_printf("EV_KEY: %d %d\n", event.code, event.value);
-                emit(output, event.type, event.code, event.value);
-                break;
-            case EV_REL:
-                // Calibrate the pointer
-                if (event.code == REL_X) {
-                    int rel_x = event.value;
-                    debug_printf("REL_X: %d\n", event.value);
-                    if (is_enabled_calibration) {
-                        if (event.value == -1) {
-                            rel_x = 0;
-                        } else {
-                            rel_x = event.value + 1;
-                        }
-                        debug_printf("REL_X (calibrated): %d\n", rel_x);
-                    } else {
-                        rel_x = event.value;
-                    }
-                    emit(output, event.type, event.code, rel_x);
-                } else if (event.code == REL_Y) {
-                    int rel_y = event.value;
-                    debug_printf("REL_Y: %d\n", event.value);
-
-                    if (is_enabled_calibration) {
-                        if (event.value == -1) {
-                            rel_y = 0;
-                        } else {
-                            rel_y = event.value + 1;
-                        }
-                        debug_printf("REL_Y (calibrated): %d\n", rel_y);
-                    } else {
-                        rel_y = event.value;
-                    }
-                    emit(output, event.type, event.code, rel_y);
-                }
-                break;
-            case EV_ABS:
-                debug_printf("EV_ABS: %d %d\n", event.code, event.value);
-                emit(output, event.type, event.code, event.value);
-                break;
-            default:
-                debug_printf("Other: %d %d\n", event.code, event.value);
-                emit(output, event.type, event.code, event.value);
-                break;
             }
+            break;
+        case EV_MSC:
+            debug_printf("EV_MSC: %d %d\n", event.code, event.value);
+            if (is_enabled_passthrough) {
+                emit(output, event.type, event.code, event.value);
+            }
+            break;
+        case EV_KEY:
+            debug_printf("EV_KEY: %d %d\n", event.code, event.value);
+            if (is_enabled_passthrough) {
+                emit(output, event.type, event.code, event.value);
+            }
+            break;
+        case EV_REL:
+            // Calibrate the pointer
+            if (event.code == REL_X) {
+                int rel_x = event.value;
+                debug_printf("REL_X: %d\n", event.value);
+                if (is_enabled_calibration) {
+                    if (event.value == -1) {
+                        rel_x = 0;
+                    } else {
+                        rel_x = event.value + 1;
+                    }
+                    debug_printf("REL_X (calibrated): %d\n", rel_x);
+                } else {
+                    rel_x = event.value;
+                }
+                if (is_enabled_passthrough) {
+                    emit(output, event.type, event.code, rel_x);
+                }
+            } else if (event.code == REL_Y) {
+                int rel_y = event.value;
+                debug_printf("REL_Y: %d\n", event.value);
+
+                if (is_enabled_calibration) {
+                    if (event.value == -1) {
+                        rel_y = 0;
+                    } else {
+                        rel_y = event.value + 1;
+                    }
+                    debug_printf("REL_Y (calibrated): %d\n", rel_y);
+                } else {
+                    rel_y = event.value;
+                }
+                if (is_enabled_passthrough) {
+                emit(output, event.type, event.code, rel_y);
+                }
+            }
+            break;
+        case EV_ABS:
+            debug_printf("EV_ABS: %d %d\n", event.code, event.value);
+            if (is_enabled_passthrough) {
+                emit(output, event.type, event.code, event.value);
+            }
+            break;
+        default:
+            debug_printf("Other: %d %d\n", event.code, event.value);
+            if (is_enabled_passthrough) {
+                emit(output, event.type, event.code, event.value);
+            }
+            break;
         }
     }
     // Never reach here...
