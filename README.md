@@ -1,5 +1,5 @@
 # minibook-support
-Softwares for CHUWI MiniBook (8-inch) / MiniBook X (10-inch) running Linux
+Software for CHUWI MiniBook (8-inch) / MiniBook X (10-inch) running Linux
 
 - Enable the tablet mode of the MiniBook / MiniBook X automatically when the MiniBook is folded.
 - Calibrate the trackpointer of the MiniBook (8-inch).
@@ -37,7 +37,7 @@ make
 sudo make install
 ```
 
-## Softwares
+## Software
 
 - [x] tabletmoded
 - [x] moused
