@@ -24,7 +24,7 @@
 #include "vdevice.h"
 
 #define INPUT_DEVICE "/dev/input/by-path/platform-i8042-serio-0-event-kbd"
-#define VERSION "keyboardd 1.1.0"
+#define VERSION "keyboardd 1.1.1"
 
 server_t *server_addr = NULL;
 
@@ -185,12 +185,12 @@ int main(int argc, char *argv[]) {
         struct input_event event;
         ssize_t result = read(input, &event, sizeof(event));
         if (result == -1) {
-            perror("read");
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 count++;
                 usleep(100000); // 100ms
                 continue;
             }
+            perror("read");
             recovery_device();
             exit(EXIT_FAILURE);
         } else if (result == sizeof(event)) {
