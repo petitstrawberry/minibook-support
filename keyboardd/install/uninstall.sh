@@ -20,13 +20,12 @@ echo "Stopping keyboardd service"
 systemctl stop keyboardd
 systemctl disable keyboardd
 
-# Remove the moused script from /usr/bin
-echo "Removing keyboardd from /usr/bin"
-rm /usr/bin/keyboardd
-
-# Remove the keyboardd.service file from /etc/systemd/system
-echo "Removing keyboardd.service from /etc/systemd/system"
-rm /etc/systemd/system/keyboardd.service
+# Execute the uninstall-executable.sh script
+chmod +x ./uninstall-executable.sh
+TARGETDIR="/usr/bin" ./uninstall-executable.sh
+# Execute the uninstall-service.sh script
+chmod +x ./uninstall-service.sh
+TARGETDIR="/etc/systemd/system" ./uninstall-service.sh
 
 # Reload systemd
 echo "Reloading systemd"
