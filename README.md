@@ -30,6 +30,18 @@ For other Linux distributions, please install the equivalent packages.
 
 ## Installation
 
+### Arch Linux
+
+AUR package is available.
+
+```bash
+yay -S minibook-support-git
+```
+
+### Build from source
+
+For other Linux distributions.
+
 ```bash
 git clone https://github.com/petitstrawberry/minibook-support.git
 cd minibook-support
