@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # Uninstall script for moused
 
 # Check if the script is run as root
@@ -20,13 +19,12 @@ echo "Stopping moused service"
 systemctl stop moused
 systemctl disable moused
 
-# Remove the moused script from /usr/bin
-echo "Removing moused from /usr/bin"
-rm /usr/bin/moused
-
-# Remove the moused.service file from /etc/systemd/system
-echo "Removing moused.service from /etc/systemd/system"
-rm /etc/systemd/system/moused.service
+# Execute the uninstall-executable.sh script
+chmod +x ./uninstall-executable.sh
+TARGETDIR="/usr/bin" ./uninstall-executable.sh
+# Execute the uninstall-service.sh script
+chmod +x ./uninstall-service.sh
+TARGETDIR="/etc/systemd/system" ./uninstall-service.sh
 
 # Reload systemd
 echo "Reloading systemd"

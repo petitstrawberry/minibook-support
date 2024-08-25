@@ -43,4 +43,24 @@ uninstall:
 	chmod +x ./install/uninstall.sh
 	./install/uninstall.sh
 
+.PHONY: install-executable
+install-executable:
+	chmod +x ./install/install-executable.sh
+	DESTDIR=$(DESTDIR) ./install/install-executable.sh
+
+.PHONY: uninstall-executable
+uninstall-executable:
+	chmod +x ./install/uninstall-executable.sh
+	TARGETDIR=$(TARGETDIR) ./install/uninstall-executable.sh
+
+.PHONY: install-service
+install-service:
+	chmod +x ./install/install-service.sh
+	DESTDIR=$(DESTDIR) ./install/install-service.sh
+
+.PHONY: uninstall-service
+uninstall-service:
+	chmod +x ./install/uninstall-service.sh
+	TARGETDIR=$(TARGETDIR) ./install/uninstall-service.sh
+
 -include $(DEPENDS)

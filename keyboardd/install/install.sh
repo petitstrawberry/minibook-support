@@ -12,13 +12,12 @@ fi
 # Change to the directory of the script
 cd "$(dirname "$0")"
 
-# Copy the keyboardd to /usr/bin
-echo "Copying moused to /usr/bin" 
-install -Dm755 ../bin/keyboardd /usr/bin/keyboardd
-
-# Copy the keyboardd.service file to /etc/systemd/system
-echo "Copying keyboardd.service to /etc/systemd/system"
-install  -Dm644 ./keyboardd.service /etc/systemd/system/keyboardd.service 
+# Execute the install-executable.sh script
+chmod +x ./install-executable.sh
+DESTDIR="/usr/bin" ./install-executable.sh
+# Execute the install-service.sh script
+chmod +x ./install-service.sh
+DESTDIR="/etc/systemd/system" ./install-service.sh
 
 # Reload systemd
 echo "Reloading systemd"
