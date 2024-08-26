@@ -3,6 +3,7 @@
 #include <linux/input.h>
 #include <linux/uinput.h>
 #include <math.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -185,6 +186,44 @@ uint8_t server_callback(uint8_t type, uint8_t data) {
     return 0;
 }
 
+int is_closed_lid = 0;
+// Lid switch event handling thread
+void *thread_lid_switch(void *arg) {
+    char path[256] = {0};
+    get_event_path_by_name("Lid Switch", path, sizeof(path));
+    if (path[0] == '\0') {
+        fprintf(stderr, "Cannot find the lid switch\n");
+        return NULL;
+    }
+
+    while (1) {
+        int fd = open(path, O_RDONLY);
+        if (fd == -1) {
+            perror("Cannot open the lid switch");
+            return NULL;
+        }
+
+        struct input_event ev;
+        while (1) {
+            if (read(fd, &ev, sizeof(ev)) == -1) {
+                perror("Cannot read the lid switch");
+                close(fd);
+                return NULL;
+            }
+
+            if (ev.type == EV_SW && ev.code == SW_LID) {
+                if (ev.value == 1) {
+                    debug_printf("Lid closed\n");
+                    is_closed_lid = 1;
+                } else {
+                    debug_printf("Lid opened\n");
+                    is_closed_lid = 0;
+                }
+            }
+        }
+    }
+}
+
 // Main
 int main(int argc, char *argv[]) {
     // Parse the command line arguments
@@ -228,6 +267,10 @@ int main(int argc, char *argv[]) {
         recovery_device();
         return (EXIT_FAILURE);
     }
+
+    // Start the lid switch thread
+    pthread_t thread;
+    pthread_create(&thread, NULL, thread_lid_switch, NULL);
 
     // Check the device model
     char device_model[256] = {0};
@@ -335,8 +378,12 @@ int main(int argc, char *argv[]) {
 
     // Main loop
     while (1) {
+        if (is_closed_lid && is_enabled_tabletmode) {
+            set_tabletmode(0);
+        }
+
         // 無効化されている場合はなにもしない
-        if (is_enabled_detection == 0) {
+        if (is_enabled_detection == 0 || is_closed_lid == 1) {
             sleep(1);
             continue;
         }
