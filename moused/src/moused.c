@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <fcntl.h>
 #include <linux/input.h>
 #include <linux/uinput.h>
@@ -20,7 +21,7 @@
     "/dev/input/by-path/"                                                      \
     "pci-0000:00:15.3-platform-i2c_designware.3-event-mouse"
 
-#define VERSION "moused 1.1.0"
+#define VERSION "moused 1.1.1"
 
 server_t *server_addr = NULL;
 
@@ -116,6 +117,27 @@ void parse_args(int argc, char *argv[]) {
     }
 }
 
+// Manage the press / release of the key
+int pressing_keys[KEY_MAX] = {0};
+void press_key(int key) {
+    debug_printf("Press key: %d\n", key);
+    pressing_keys[key] = 1;
+}
+void release_key(int key) {
+    debug_printf("Release key: %d\n", key);
+    pressing_keys[key] = 0;
+}
+void release_unreleased_keys() {
+    for (int i = 0; i < KEY_MAX; i++) {
+        if (pressing_keys[i]) {
+            release_key(i);
+            // Release the key
+            emit(output, EV_KEY, i, 0);
+            emit(output, EV_SYN, SYN_REPORT, 0);
+        }
+    }
+}
+
 // Server callback
 uint8_t server_callback(uint8_t type, uint8_t data) {
     debug_printf("Server callback: %d %d\n", type, data);
@@ -123,6 +145,9 @@ uint8_t server_callback(uint8_t type, uint8_t data) {
     case 0:
         debug_printf("Set passthrough: %d\n", data);
         is_enabled_passthrough = data;
+        if (!is_enabled_passthrough) {
+            release_unreleased_keys();
+        }
         return 0;
     case 1:
         return (uint8_t)is_enabled_passthrough;
@@ -163,7 +188,45 @@ int main(int argc, char *argv[]) {
         return (EXIT_FAILURE);
     }
 
-    sleep(1);
+    // Wait until the all keys are released
+    debug_printf("Wait until all keys are released\n");
+    // Set the input device to non-blocking mode
+    fcntl(input, F_SETFL, O_NONBLOCK);
+    int pressing_count = 0;
+    int count = 0;
+    while (pressing_count != 0 || count < 10) {
+        struct input_event event;
+        ssize_t result = read(input, &event, sizeof(event));
+        if (result == -1) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                count++;
+                usleep(100000); // 100ms
+                continue;
+            }
+            perror("read");
+            recovery_device();
+            exit(EXIT_FAILURE);
+        } else if (result == sizeof(event)) {
+            if (event.type == EV_KEY) {
+                if (event.value > 0) {
+                    if (pressing_keys[event.code] == 0) {
+                        press_key(event.code);
+                        pressing_count++;
+                    }
+                } else if (event.value == 0) {
+                    if (pressing_keys[event.code] == 1) {
+                        release_key(event.code);
+                        pressing_count--;
+                    }
+                }
+            }
+        }
+        count++;
+        usleep(100000); // 100ms
+    }
+    debug_printf("All keys are released\n");
+    // Set the input device to blocking mode
+    fcntl(input, F_SETFL, 0);
 
     // Disable the input device
     ioctl(input, EVIOCGRAB, 1);
@@ -212,7 +275,13 @@ int main(int argc, char *argv[]) {
             break;
         case EV_KEY:
             debug_printf("EV_KEY: %d %d\n", event.code, event.value);
+            // passthrough
             if (is_enabled_passthrough) {
+                if (event.value > 0) {
+                    press_key(event.code);
+                } else if (event.value == 0) {
+                    release_key(event.code);
+                }
                 emit(output, event.type, event.code, event.value);
             }
             break;
@@ -249,7 +318,7 @@ int main(int argc, char *argv[]) {
                     rel_y = event.value;
                 }
                 if (is_enabled_passthrough) {
-                emit(output, event.type, event.code, rel_y);
+                    emit(output, event.type, event.code, rel_y);
                 }
             }
             break;
