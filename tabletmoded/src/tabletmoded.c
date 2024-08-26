@@ -19,7 +19,7 @@
 #include "server.h"
 #include "vdevice.h"
 
-#define VERSION "tabletmoded 1.1.0"
+#define VERSION "tabletmoded 1.1.1"
 
 #define KEYBOARDD_SOCK "/var/run/keyboardd.sock"
 #define mouseD_SOCK "/var/run/moused.sock"
@@ -238,6 +238,15 @@ int main(int argc, char *argv[]) {
         recovery_device();
         return (EXIT_FAILURE);
     }
+
+    // Check the screen accelerometer is available
+    struct stat st;
+    if (stat(ACCEL_SCREEN_PATH, &st) == -1) {
+        fprintf(stderr, "Cannot find the screen accelerometer\n");
+        recovery_device();
+        return (EXIT_FAILURE);
+    }
+
     // for MIniBook X (10-inch)
     if (strncmp(device_model, "MiniBook X", 10) == 0) {
         // Check the base accelerometer is available
@@ -260,6 +269,37 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Cannot enable the base accelerometer\n");
             recovery_device();
             return (EXIT_FAILURE);
+        }
+    } else {
+        // for MiniBook (8-inch)
+        // Check the base accelerometer is available
+        struct stat st;
+        if (stat(ACCEL_BASE_PATH, &st) == -1) {
+            fprintf(stderr, "Cannot find the base accelerometer\n");
+            fprintf(stderr, "Reload the i2c driver\n");
+
+            // Try to enable the base accelerometer
+            // Reload the i2c driver
+            // rmmod bmc150_accel_i2c
+            // modprobe bmc150_accel_i2c
+            if (system("rmmod bmc150_accel_i2c") == -1) {
+                perror("system");
+                fprintf(stderr, "Cannot unload the bmc150_accel_i2c\n");
+            }
+            if (system("modprobe bmc150_accel_i2c") == -1) {
+                perror("system");
+                fprintf(stderr, "Cannot load the bmc150_accel_i2c\n");
+                recovery_device();
+                return (EXIT_FAILURE);
+            }
+            sleep(1); // Wait for the device
+
+            // Check the base accelerometer is available again
+            if (stat(ACCEL_BASE_PATH, &st) == -1) {
+                fprintf(stderr, "Cannot enable the base accelerometer\n");
+                recovery_device();
+                return (EXIT_FAILURE);
+            }
         }
     }
 
