@@ -3,7 +3,7 @@ Description=Daemon for the tabletmode of the MiniBook
 ConditionPathExists=/usr/bin/
 
 Requires=moused.service keyboardd.service sysinit.target
-After=moused.service keyboardd.service sysinit.target basic.target
+After=moused.service keyboardd.service iio-sensor-proxy.service sysinit.target basic.target
 
 [Service]
 
