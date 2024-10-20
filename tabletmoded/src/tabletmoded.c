@@ -245,22 +245,6 @@ int main(int argc, char *argv[]) {
     // Setup the server
     setup_server(&server, TABLETMODED_SOCK, server_callback);
 
-    // Tweaks the permission
-    // chown wheel group
-    struct group *grp = getgrnam("wheel");
-    if (grp == NULL) {
-        grp = getgrnam("sudo"); // for Ubuntu
-    }
-    if (grp == NULL) {
-        perror("getgrnam");
-        perror("Skip the permission tweaks");
-    } else {
-        if (chown(TABLETMODED_SOCK, -1, grp->gr_gid) == -1) {
-            perror("chown");
-            return -1;
-        }
-    }
-
     // Start the server
     if (start_server(&server) == 1) {
         perror("Cannot start the server");
