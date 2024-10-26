@@ -20,7 +20,7 @@
 #include "server.h"
 #include "vdevice.h"
 
-#define VERSION "tabletmoded 1.2.0"
+#define VERSION "tabletmoded 1.3.0"
 
 #define KEYBOARDD_SOCK "/var/run/keyboardd.sock"
 #define mouseD_SOCK "/var/run/moused.sock"
@@ -180,6 +180,11 @@ uint8_t server_callback(uint8_t type, uint8_t data) {
         return 0;
     case 1:
         return (uint8_t)is_enabled_detection;
+    case 2:
+        set_tabletmode(data);
+        return 0;
+    case 3:
+        return (uint8_t)is_enabled_tabletmode;
     default:
         break;
     }

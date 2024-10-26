@@ -1,6 +1,7 @@
 #include "server.h"
 
 #include <bits/pthreadtypes.h>
+#include <grp.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +31,21 @@ int prepare_socket(const char *path) {
     if (chmod(addr.sun_path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) == -1) {
         perror("chmod");
         return -1;
+    }
+
+    // chown wheel group
+    struct group *grp = getgrnam("wheel");
+    if (grp == NULL) {
+        grp = getgrnam("sudo"); // for Ubuntu
+    }
+    if (grp == NULL) {
+        perror("getgrnam");
+        perror("Skip the permission tweaks");
+    } else {
+        if (chown(addr.sun_path, -1, grp->gr_gid) == -1) {
+            perror("chown");
+            return -1;
+        }
     }
 
     return sockfd;
