@@ -180,6 +180,11 @@ uint8_t server_callback(uint8_t type, uint8_t data) {
         return 0;
     case 1:
         return (uint8_t)is_enabled_detection;
+    case 2:
+        set_tabletmode(data);
+        return 0;
+    case 3:
+        return (uint8_t)is_enabled_tabletmode;
     default:
         break;
     }
