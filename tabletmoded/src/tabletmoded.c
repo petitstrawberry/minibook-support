@@ -20,7 +20,7 @@
 #include "server.h"
 #include "vdevice.h"
 
-#define VERSION "tabletmoded 1.1.1"
+#define VERSION "tabletmoded 1.3.0"
 
 #define KEYBOARDD_SOCK "/var/run/keyboardd.sock"
 #define mouseD_SOCK "/var/run/moused.sock"

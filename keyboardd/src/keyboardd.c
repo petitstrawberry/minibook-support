@@ -1,5 +1,6 @@
 // Keyboard daemon
 
+#include <errno.h>
 #include <fcntl.h>
 #include <linux/input-event-codes.h>
 #include <linux/input.h>
@@ -17,14 +18,13 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
-#include <errno.h>
 
 #include "debug.h"
 #include "server.h"
 #include "vdevice.h"
 
 #define INPUT_DEVICE "/dev/input/by-path/platform-i8042-serio-0-event-kbd"
-#define VERSION "keyboardd 1.1.1"
+#define VERSION "keyboardd 1.3.0"
 
 server_t *server_addr = NULL;
 
