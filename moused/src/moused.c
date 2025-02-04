@@ -21,7 +21,7 @@
     "/dev/input/by-path/"                                                      \
     "pci-0000:00:15.3-platform-i2c_designware.3-event-mouse"
 
-#define VERSION "moused 1.1.1"
+#define VERSION "moused 1.3.0"
 
 server_t *server_addr = NULL;
 
