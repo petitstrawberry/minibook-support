@@ -9,6 +9,9 @@ clean:
 	for target in $(TARGETS); do \
 		$(MAKE) -C $$target clean; \
 	done
+	for lib in $(LIBS); do \
+		$(MAKE) -C $$lib clean; \
+	done
 
 install:
 	for target in $(TARGETS); do \
