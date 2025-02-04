@@ -1,8 +1,9 @@
-TARGETS = common moused keyboardd tabletmoded
+TARGETS = moused keyboardd tabletmoded
+LIBS = common
 
-.PHONY: all clean install uninstall $(TARGETS)
+.PHONY: all clean install uninstall $(TARGETS) $(LIBS)
 
-ll: $(TARGETS)
+all: $(TARGETS)
 
 clean:
 	for target in $(TARGETS); do \
@@ -39,5 +40,8 @@ uninstall-service:
 		$(MAKE) -C $$target uninstall-service; \
 	done
 
-$(TARGETS):
+$(TARGETS): $(LIBS)
+	$(MAKE) -C $@
+
+$(LIBS):
 	$(MAKE) -C $@
