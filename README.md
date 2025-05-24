@@ -1,12 +1,12 @@
 # minibook-support
-Software for CHUWI MiniBook (8-inch) / MiniBook X (10-inch) running Linux
+Software for CHUWI MiniBook (8-inch) / MiniBook X (10-inch) / FreeBook N100 (14-inch) running Linux
 
-- Enable the tablet mode of the MiniBook / MiniBook X automatically when the MiniBook is folded.
+- Enable the tablet mode of the MiniBook / MiniBook X / FreeBook N100 automatically when the MiniBook is folded.
 - Calibrate the trackpointer of the MiniBook (8-inch).
 
 ## Requirements
 
-- CHUWI MiniBook / MiniBook X
+- CHUWI MiniBook / MiniBook X / FreeBook N100
 - Linux 6.9 or later
   - Needed for MiniBook X
 
@@ -27,6 +27,9 @@ For other Linux distributions, please install the equivalent packages.
 - MiniBook X (10-inch)
   - Ubuntu 24.04
     - Linux 6.10.6
+- FreeBook N100 (14-inch)
+  - Arch Linux
+    - Linux 6.13.7-arch1-1
 
 ## Installation
 
