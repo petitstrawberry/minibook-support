@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <fcntl.h>
 #include <grp.h>
 #include <linux/input.h>
@@ -265,7 +266,7 @@ int main(int argc, char *argv[]) {
     char device_model[256] = {0};
     get_device_model(device_model, sizeof(device_model));
     debug_printf("Device model: %s\n", device_model);
-    if (strstr(device_model, "MiniBook") == NULL) {
+    if (strstr(device_model, "MiniBook") == NULL && strstr(device_model, "FreeBook") == NULL) {
         fprintf(stderr, "This device is not supported\n");
         recovery_device();
         return (EXIT_FAILURE);
@@ -280,13 +281,38 @@ int main(int argc, char *argv[]) {
     }
 
     // for MIniBook X (10-inch)
-    if (strncmp(device_model, "MiniBook X", 10) == 0) {
+    if (strncmp(device_model, "MiniBook X", 10) == 0 || strncmp(device_model, "FreeBook", 8) == 0) {
         // Check the base accelerometer is available
-        struct stat st;
+        struct  stat st;
+        char buffer[1024] = {0};
+        ssize_t len = 0;
+        int device = 0;
+        len = readlink("/sys/bus/iio/devices/iio:device0", buffer, sizeof(buffer)-2);
+        if (len > 0) {
+            char *device_str = NULL;
+            buffer[len] = 0;
+            device_str = strstr(buffer, "/i2c-");
+            if (device_str != NULL)
+            {
+                int i = 0;
+                device_str = device_str + 5;
+                while (isdigit(device_str[i]) && i < 3) {
+                    i++;
+                }
+                device_str[i] = 0;
+                device = atoi(device_str);
+                if (device > 0) {
+                    device = device - 1;
+                }
+                device_str = NULL;
+            }
+        }
+
         if (stat(ACCEL_BASE_PATH, &st) == -1) {
             // Enable the accelerometer
             // echo mxc4005 0x15 > /sys/bus/i2c/devices/i2c-0/new_device
-            FILE *fp = fopen("/sys/bus/i2c/devices/i2c-0/new_device", "w");
+            sprintf(buffer, "/sys/bus/i2c/devices/i2c-%d/new_device", device);
+            FILE *fp = fopen(buffer, "w");
             if (fp == NULL) {
                 perror("Cannot open the new_device");
                 recovery_device();
@@ -295,6 +321,14 @@ int main(int argc, char *argv[]) {
             fprintf(fp, "mxc4005 0x15\n");
             fclose(fp);
             sleep(1); // Wait for the device
+        }
+        // Check if the module is loaded
+        if (stat(ACCEL_BASE_PATH, &st) == -1) {
+           if (stat("/sys/module/bmc150_accel_i2c/initstate", &st) == -1) {
+               fprintf(stderr, "module bmc150_accel_i2c not loaded\n");
+               // this probably should be replaced with EXIT_FAILURE
+               system("modprobe bmc150_accel_i2c");
+           }
         }
         // Check the base accelerometer is available again
         if (stat(ACCEL_BASE_PATH, &st) == -1) {

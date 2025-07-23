@@ -166,12 +166,12 @@ int main(int argc, char *argv[]) {
     char device_model[256] = {0};
     get_device_model(device_model, sizeof(device_model));
     debug_printf("Device model: %s\n", device_model);
-    if (strstr(device_model, "MiniBook") == NULL) {
+    if (strstr(device_model, "MiniBook") == NULL && strstr(device_model, "FreeBook") == NULL) {
         fprintf(stderr, "This device is not supported\n");
         recovery_device();
         return (EXIT_FAILURE);
     }
-    if (strncmp(device_model, "MiniBook X", 10) == 0) {
+    if (strncmp(device_model, "MiniBook X", 10) == 0 || strncmp(device_model, "FreeBook", 8) == 0) {
         input = open(MINIBOOKX_INPUT_DEVICE, O_RDWR);
         is_enabled_calibration = 0;
     } else {
